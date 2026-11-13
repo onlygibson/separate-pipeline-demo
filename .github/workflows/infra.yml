@@ -1,0 +1,121 @@
+name: Infrastructure pipeline
+
+# Runs only when Terraform changes. Application changes do not trigger it.
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+
+# Read-only: this pipeline cannot publish or sign images.
+permissions:
+  contents: read
+
+# Never cancel a run mid-apply; queue the next one instead.
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  # Local AWS emulator, pinned by digest so the image cannot change unreviewed.
+  FLOCI_IMAGE: floci/floci@sha256:5ee85db604c4aa74ac76e07ea5cc83086f37bb472bf3dbb97e34019e48efae9c
+
+defaults:
+  run:
+    working-directory: infra
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.2"
+          terraform_wrapper: false
+
+      - name: Check formatting
+        run: terraform fmt -check
+
+      - name: Init
+        run: terraform init
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Start Floci
+        run: |
+          docker run -d --name floci -p 4566:4566 "$FLOCI_IMAGE"
+          for i in $(seq 1 30); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' floci)" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs floci
+          exit 1
+
+      - name: Plan
+        run: terraform plan -out=tfplan
+
+      - name: Show plan in the run summary
+        run: |
+          {
+            echo "### Terraform plan"
+            echo '```'
+            terraform show -no-color tfplan
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.2"
+          terraform_wrapper: false
+
+      - name: Init
+        run: terraform init
+
+      - name: Start Floci
+        run: |
+          docker run -d --name floci -p 4566:4566 "$FLOCI_IMAGE"
+          for i in $(seq 1 30); do
+            if [ "$(docker inspect -f '{{.State.Health.Status}}' floci)" = "healthy" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs floci
+          exit 1
+
+      - name: Apply
+        run: terraform apply -auto-approve
+
+      - name: Show what was created
+        run: |
+          {
+            echo "### Applied to Floci"
+            echo '```'
+            terraform state list
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
