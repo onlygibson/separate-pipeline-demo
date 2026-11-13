@@ -1,0 +1,8 @@
+tests/
+requirements-dev.txt
+pytest.ini
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
