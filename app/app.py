@@ -12,5 +12,9 @@ def health():
 def hello(name):
     return jsonify(message=f"Hello, {name}!")
 
+@app.route('/version')
+def version():
+    return jsonify(version="1.0.0")
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
