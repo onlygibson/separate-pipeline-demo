@@ -6,8 +6,9 @@ resource "aws_s3_bucket" "artifacts" {
   bucket = "separate-pipeline-demo-artifacts"
 
   tags = {
-    ManagedBy = "terraform"
-    Project   = "separate-pipeline-demo"
+    ManagedBy   = "terraform"
+    Project     = "separate-pipeline-demo"
+    Environment = "demo"
   }
 }
 
