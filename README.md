@@ -1,1 +1,1 @@
-# separate-pipeline-semo
+# separate-pipeline-demo
