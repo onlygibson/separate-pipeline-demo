@@ -27,17 +27,6 @@ resource "aws_kms_key" "artifacts" {
   deletion_window_in_days = 7
 }
 
-# Encrypt everything at rest with that key.
-resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
-  bucket = aws_s3_bucket.artifacts.id
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.artifacts.arn
-    }
-  }
-}
-
 # Never public, whatever anyone sets later.
 resource "aws_s3_bucket_public_access_block" "artifacts" {
   bucket                  = aws_s3_bucket.artifacts.id
