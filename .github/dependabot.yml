@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Python libraries in app/requirements.txt
+  - package-ecosystem: "pip"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+  
+  # The python base image in app/Dockerfile 
+  - package-ecosystem: "docker"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+  
+  # Action versions like actions/checkout@v4
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  
+  # The AWS provider in infra/
+  - package-ecosystem: "terraform"
+    directory: "/infra"
+    schedule:
+      interval: "weekly"
